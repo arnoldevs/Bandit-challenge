@@ -1,4 +1,5 @@
-> Todos los ejercicios realizados a continuación se encuentran disponibles [***aquí***](https://overthewire.org/wargames/bandit/) y deben realizarse mediante conexión SSH
+> ### Todos los ejercicios realizados a continuación se encuentran disponibles [***aquí***](https://overthewire.org/wargames/bandit/) y deben realizarse mediante conexión SSH.
+> ### *Cada cierto tiempo las instrucciones de los ejercicios varían levemente agregando o quitando acciones, pero el desarrollo mostrado a continuación sirve como una base sólida sin importar los futuros cambios implementados en el Bandit game, pudiendo aplicar de una u otra forma todas las explicaciones de éste documento.*
 
 + ### **Nivel** 0
 La contraseña está en un archivo readme en el directorio home, no hay complicación, es leerlo en la terminal.
@@ -249,7 +250,7 @@ O sea que hay que usar 2 terminales.
 
 En la primera activas un escuchador de netcat en un puerto no usado, por ejemplo:
 
-~~~basj
+~~~bash
 nc -lvnp 6000
 ~~~
 o
@@ -260,4 +261,155 @@ nc -nlvp 4646
 Y pegas la contraseña de este nivel 20.
 
 Ahora abres otra terminal, conectas al nivel 20 por ssh, ejecutas ./suconnect 6000 para que lea lo que has puesto en ese puerto y, si te dice correcto, vas al escuchador a ver la contraseña que te ha enviado.
+
++ ### **Nivel** 21
+El texto del nivel dice: Un programa está corriendo a intervalos regulares con cron. Mira en /etc/cron.d/ para ver el comando que se está ejecutando.
+
+Hay varios scripts en /etc/cron.d y he mirado el de bandit22, he examinado con un editor y veo en el código (es muy sencillo) que lo que hace es que vuelca la contraseña a un archivo en /tmp/ así que copio el /tmp/nombredearchivo y hago cat sobre él
+
++ ### **Nivel** 22
+Hay un script de cron de bandit23, lo examino con cat o un editor de texto (nano o vim) y veo que ejecuta esto:
+
+~~~bash
+#!/bin/bash
+
+myname=$(whoami)
+mytarget=$(echo I am user $myname | md5sum | cut -d ' ' -f 1)
+
+echo "Copying passwordfile /etc/bandit_pass/$myname to /tmp/$mytarget"
+
+cat /etc/bandit_pass/$myname > /tmp/$mytarget
+~~~
+
+Cuyo resultado se añade a /tmp/ así que veo qué resultado arroja luego de transformar la cadena en un hash md5.
+Ahora, en la terminal del nivel 22 a la que he conectado por ssh, hago cat /tmp/resultadodelscript y veo la contraseña que vuelca ahí.
+
++ ### **Nivel** 23
+Hay que crear un script propio aquí, por suerte es relativamente sencillo.
+
+Hay que ver el script que corre en cron y que comentan las instrucciones. Básicamente, el script dice que si meto otro script mío en /var/spool/bandit24/foo lo correrá.
+
+En éste nivel es muy importante ir revisando siempre los permisos de los directorios y/o archivos a manipular.
+
+Ese script .sh debe ser como el del nivel 21, un cat a la contraseña donde se guarda esta.
+
+La cuestión es que debo crear un directorio de trabajo en /tmp en el que pueda guardar y cambiar permisos. Creo /tmp/dir_name y le doy permisos 777 porque me complico lo mínimo.
+~~~bash
+dir_name=$(mktemp -d)
+~~~
+Ahora, creo mi super script y lo edito, en mi caso utilizo vim. 
+
+~~~bash
+#!/bin/bash
+cat /etc/bandit_pass/bandit24 > /tmp/dir_name/pass.log
+chmod o+rw /tmp/dir_name/pass.log
+~~~
+Ahora le doy permisos de ejecución a mi script o no corre.
+~~~bash
+chmod +x /tmp/dir_name/script.sh
+~~~
+Lo copio a la dirección que me dicen las instrucciones.
+~~~bash
+cp /tmp/dir_name/script.sh /var/spool/bandit24/foo/
+~~~
+Espero un tiempo a que cron actúe, lo corra,
+pudiendo monitorear el proceso con watch (watch -n 1 ls -l), luego hago:
+~~~bash
+cat /tmp/dir_name/pass.log 
+~~~
+para ver la contraseña.
+
++ ### **Nivel** 24
+Un demonio está escuchando en el puerto 30002. Si le das la contraseña de 23 un espacio y un pin de 4 dígitos te da la contraseña de 24.
+
+Así que hay que hacer un ataque de fuerza bruta.
+
+Para eso hacemos un script en bash que con, un bucle for, escriba todos los combos posibles a un fichero txt.
+o podemos realizar el proceso directamente desde la terminal sin tocar un editor de texto, pero primero debemos crear un directorio en /tmp/ y posicionarnos dentro de él para luego 
+~~~bash
+for pin in {0000..9999}; do echo "VAfGXJ1PBSsPSnvsjI8p759leLZ9GGar $pin"; done > credentials.txt
+~~~
+mediante ésta acción volcamos el output del ciclo a un archivo para así poder ingresar mediante netcat
+Ahora hemos de conectar con netcat y alimentarle el archivo creado con todas las combinaciones de 4 dígitos que ha creado mi script con el bucle for.
+
+~~~bash
+cat credentials.txt | nc localhost 30002 | grep -vE "Wrong|Please enter"
+~~~
+si no filtramos con grep irá dando un montón de errores hasta que encaja el código de 4 dígitos y arroja la contraseña, Pero al filtrar se mostrara limpiamente la cadena de caracteres deseada.
+
++ ### **Nivel** 25
+Ingenioso, quizá demasiado para mí.
+
+Al entrar por ssh@localhost con la key de bandit26 ejecuta un script en vez de bash que muestra un texto con el comando more y cierra con exit 0.
+
+Así que hacemos muy pequeña la terminal para obligar a que se ejecute el more(ésta utilidad es la clave) y en ese momento pulsamos v y nos abre vim.
+
+Desde vim abrimos /etc/bandit_pass/bandit26 para ver la contraseña. Abrir en Vim se hace con el comando :e
+
+~~~bash
+:e /etc/bandit_pass/bandit26
+~~~
+
++ ### **Nivel** 26
+Nos encontramos con lo mismo de antes. Usamos el truco de vim una vez disparamos el more con pantalla empequeñecida.
+
+Vim puede ejecutar comandos de terminal, pero como la terminal del usuario es el asquete, cambiamos la terminal que usa Vim con el comando:
+
+:set shell=/bin/bash
+Bash
+Ahora, vemos que hay un programa bandit27-do que ejecuta como bandit27 pero solo acepta una palabra como argumento. Poner más de una lo fastidia todo, así que, ¿cómo «metemos varias palabras en una»? Haciendo un script y alimentando su nombre al programa bandit27-do.
+
+Así que hacemos un script con una única instrucción que sea
+
+~~~bash
+cat /etc/bandit_pass/bandit27
+~~~
+y lo alimentamos a bandit27-do
+~~~bash
+./bandit27-do script
+~~~
+Nota: no pongas el shebang inicial en el script (#!/bin/bash) como he hecho yo, que así no funciona.
+
++ ### **Nivel** 27
+Hay un repositorio en ssh://bandit27-git@localhost/home/bandit27-git/repo y hay que clonarlo (recordemos que sólo nos dejará maniobrar con directorios dentro de /tmp). Hacemos:
+
+~~~bash
+git clone ssh://bandit27-git@localhost/home/bandit27-git/repo /tmp/directoriodetrabajo
+~~~
+
+Y hay un README con la contraseña que leemos para ver cuál es.
+
++ ### **Nivel** 28
+Hay un repositorio en ssh://bandit28-git@localhost/home/bandit28-git/repo, así que lo clono como antes en un /tmp/directorio. La contraseña en el README está censurada.
+
+Veo los cambios que se han hecho con
+
+~~~bash
+git log
+~~~
+
+Compruebo que hay uno que pone «fix leak information».
+
+Puedo ver ese commit poniendo
+
+~~~bash
+git show [hash de ese *commit*]
+~~~
+
+Ahora sí aparece la contraseña.
+
++ ### **Nivel** 29
+Hay un repositorio en ssh://bandit29-git@localhost/home/bandit29-git/repo y lo clono en /tmp/directoriodetrabajo como antes.
+
+El README dice que no hay contraseñas en producción. Pero habrá otras ramas, seguramente.
+
+Veo qué ramas hay con:
+~~~bash
+git branch -a
+~~~
+Compruebo que hay una que es remotes/origin/dev y pruebo con esa, así que la examino con:
+~~~bash
+git checkout -t remotes/origin/dev
+~~~
+La terminal dice que ha cambiado a esa rama y, cuando leo el README que hay ahí, está la contraseña.
 
