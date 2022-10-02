@@ -413,3 +413,60 @@ git checkout -t remotes/origin/dev
 ~~~
 La terminal dice que ha cambiado a esa rama y, cuando leo el README que hay ahí, está la contraseña.
 
++ ### **Nivel** 30
+Hay un repositorio en ssh://bandit30-git@localhost/home/bandit30-git/repo y lo clono en /tmp/directorioquesemeocurra
+
+No hay ramas y el README dice que «está vacío, jajaja».
+
+La está en:
+~~~bash
+git tag
+~~~
+Que sirve para ver etiquetas de puntos importantes que se hayan añadido. Al hacerlo, veo una tag llamada secret.
+
+Hacemos:
+~~~bash
+git show secret
+~~~
+y sale la contraseña.
+
++ ### **Nivel** 31
+Hay un repositorio en ssh://bandit31-git@localhost/home/bandit31-git/repo el README dice que debemos subir (push) un archivo al repositorio remoto y nos dice cómo debe ser.
+
+Creamos el archivo según las instrucciones y al añadir con
+~~~bash
+git add .
+~~~
+No hace nada, cuando hacemos commit nos dice que todo está actualizado.
+
+Si le decimos
+~~~bash
+git add key.txt
+~~~
+Nos desvela que .gitignore tiene un regla para impedir un archivo así y que, si queremos añadirlo de veras, hemos de usar -f (force) así que hacemos
+~~~bash
+git add -f .
+~~~
+Y luego(opcionalmente puedes agregar un mensaje al commit con -m)
+~~~bash
+git commit
+~~~
+Por fin nos dice que ok. Como hay que subirlo a master hacemos
+~~~bash
+git push origin master
+~~~
+Y la respuesta del servidor nos da la clave.
+
++ ### **Nivel** 32
+Entramos a una shell que nos convierte todo en mayúsculas, arruinando los comandos y no encontrando ninguno.
+
+Pero si hacemos:
+
+$0
+Bash
+invocamos de nuevo la shell y ya la tenemos normal.
+
+Desde ahí podemos hacer cat /etc/bandit_pass/bandit33
+
++ ### **Nivel** 33
+Es el último nivel, si nos identificamos, nos felicita y nos dice que, de momento, no hay nada más.
